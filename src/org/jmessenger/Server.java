@@ -14,6 +14,27 @@ class Server {
     // One <code>Connection</code> object per client
     private Map<String,Connection> connectionMap = new HashMap<>();
 
+    public static void main(String[] args) {
+        // load server configuration from file
+        Properties properties = new Properties();
+        try {
+            properties.load(new FileReader(new File("server.properties")));
+        } catch (IOException e) {
+            System.out.println("Server: Failed to read settings from file \"server.properties\"");
+            return;
+        }
+        // create a server and start it
+        String port = properties.getProperty("SERVER_PORT");
+        Server server = null;
+        try {
+            server = new Server(Integer.parseInt(port));
+        } catch (IOException e) {
+            System.out.println("Failed to start a server.");
+            return;
+        }
+        server.start();
+    }
+
     /**
      * Creates a <code>ServerSocket</code> on the given port
      * @param serverPort port to listen to
@@ -81,6 +102,7 @@ class Server {
                 }
                 if (message.getType() == MessageType.DISCONNECT) {
                     connectionMap.remove(userName);
+                    System.out.println("Disconnected user " + userName);
                     return;
                 }
                 message.setText(userName + ": " + message.getText());
@@ -97,27 +119,6 @@ class Server {
         }
     }
 
-
-    public static void main(String[] args) {
-        // load server configuration from file
-        Properties properties = new Properties();
-        try {
-            properties.load(new FileReader(new File("server.properties")));
-        } catch (IOException e) {
-            System.out.println("Server: Failed to read settings from file \"server.properties\"");
-            return;
-        }
-        // create a server and start it
-        String port = properties.getProperty("SERVER_PORT");
-        Server server = null;
-        try {
-            server = new Server(Integer.parseInt(port));
-        } catch (IOException e) {
-            System.out.println("Failed to start a server.");
-            return;
-        }
-        server.start();
-    }
 }
 
 
