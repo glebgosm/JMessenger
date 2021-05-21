@@ -1,4 +1,6 @@
-package org.jmessenger;
+package org.jmessenger.server;
+
+import org.jmessenger.*;
 
 import java.io.File;
 import java.io.FileReader;
@@ -11,8 +13,9 @@ import java.util.Properties;
 
 class Server {
     private final ServerSocket serverSocket;
+    private final LoginManager loginManager;
     // One <code>Connection</code> object per client
-    private Map<String,Connection> connectionMap = new HashMap<>();
+    private Map<String, Connection> connectionMap = new HashMap<>();
 
     public static void main(String[] args) {
         // load server configuration from file
@@ -28,10 +31,11 @@ class Server {
         Server server = null;
         try {
             server = new Server(Integer.parseInt(port));
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println("Failed to start a server.");
             return;
         }
+        System.out.println("Server started");
         server.start();
     }
 
@@ -40,12 +44,16 @@ class Server {
      * @param serverPort port to listen to
      * @throws IOException if I/O error occurs while opening the socket
      */
-    private Server(int serverPort) throws IOException {
+    private Server(int serverPort) throws Exception {
         // create a server socket
         try {
             serverSocket = new ServerSocket(serverPort);
+            loginManager = LoginManager.getInstance();
         } catch (IOException e) {
             System.out.println("Server: Failed to connect to the port " + serverPort);
+            throw e;
+        } catch (AuthorizationException e) {
+            System.out.println("Server: Failed to connect to database.");
             throw e;
         }
     }
@@ -80,16 +88,29 @@ class Server {
         }
         @Override
         public void run() {
-            // request client name
             try {
+                // request client name
                 while (userName == null || userName.equals("") || connectionMap.containsKey(userName)) {
                     connection.sendMessage(new Message(MessageType.NAME_REQUEST));
                     userName = connection.receiveMessage( ).getText( );
                 }
+                // request client password
+                connection.sendMessage(new Message(MessageType.PASSWORD_REQUEST));
+                String password = connection.receiveMessage().getText();
+                // authenticate user
+                LoginManager.AuthResponse authResponse = loginManager.checkCredentials(userName,password);
+                if (authResponse == LoginManager.AuthResponse.USER_NOT_EXIST) {
+                    loginManager.addUser(userName,password);
+                } else if (authResponse == LoginManager.AuthResponse.PASSWORD_INCORRECT) {
+                    connection.sendMessage(new Message(MessageType.PASSWORD_INCORRECT));
+                    return;
+                }
+                connection.sendMessage(new Message(MessageType.LOGIN_OK));
             } catch (Exception e) {
                 // drop connection
                 return;
             }
+            // authentication ok, process the user
             connectionMap.put(userName, connection);
             System.out.println("Connected a new user: " + userName);
             // start listening to the client and broadcasting its messages

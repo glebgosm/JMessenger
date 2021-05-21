@@ -15,6 +15,7 @@ class Client {
     private Connection connection;
     private View view;
     private String userName;
+    private String password;
 
     public static void main(String[] args) {
         // load server configuration from file
@@ -34,21 +35,36 @@ class Client {
             System.out.println("Failed to create a GUI form.");
             return;
         }
-        // ask user name
-        client.userName = client.view.getUserName();
-        if (client.userName == null) {
-            System.out.println("Failed to request user name.");
-            client.view.dispose();
-            return;
-        }
-        // initialize connection
-        try {
-            String port = properties.getProperty("SERVER_PORT");
-            client.connectServer(properties.getProperty("SERVER_ADDRESS"), Integer.parseInt(port));
-        } catch(Exception e) {
-            client.view.popupError("Failed to connect to the server.");
-            client.view.dispose();
-            return;
+        // Establish connection with the server and authenticate user
+        while (true) {
+            // ask user name
+            client.userName = client.view.getUserInput("Enter your username");
+            if (client.userName == null) {
+                System.out.println("Failed to request user name.");
+                client.view.dispose();
+                return;
+            }
+            // ask user password
+            client.password = client.view.getUserInput("Enter password");
+            if (client.password == null) {
+                System.out.println("Failed to request user password.");
+                client.view.dispose();
+                return;
+            }
+            // initialize connection and authenticate
+            try {
+                String port = properties.getProperty("SERVER_PORT");
+                boolean connectionOK = client.connectServer(
+                        properties.getProperty("SERVER_ADDRESS"),
+                        Integer.parseInt(port)
+                );
+                if (connectionOK) break;
+            } catch (Exception e) {
+                client.view.popupError("Failed to connect to the server.");
+                client.view.dispose();
+                return;
+            }
+            client.view.popupError("Password incorrect. Try again.");
         }
         // listen to incoming messages
         while (true) {
@@ -66,15 +82,23 @@ class Client {
      * Establish connection with the server.
      * @throws IOException if connection fails
      */
-    private void connectServer(String serverAddress, int serverPort) throws IOException {
+    private boolean connectServer(String serverAddress, int serverPort) throws IOException {
         Socket socket = new Socket(serverAddress, serverPort);
         connection = new Connection(socket);
+        // send username
         while (true) {
-            Message message = connection.receiveMessage( );
+            Message message = connection.receiveMessage();
             if (message.getType() != MessageType.NAME_REQUEST) continue;
             connection.sendMessage(new Message(MessageType.TEXT, userName));
-            return;
+            break;
         }
+        // send password
+        while (true) {
+            if (connection.receiveMessage().getType() != MessageType.PASSWORD_REQUEST) continue;
+            connection.sendMessage(new Message(MessageType.TEXT, password));
+            break;
+        }
+        return connection.receiveMessage().getType() == MessageType.LOGIN_OK;
     }
 
     /**

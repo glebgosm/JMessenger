@@ -140,13 +140,13 @@ public class View extends JFrame {
      * Request user name from the user.
      * @return user name entered
      */
-    public String getUserName() {
+    public String getUserInput(String requestText) {
         AtomicReference<String> name = new AtomicReference<>();
         boolean ok = runOnEDT(() ->
                 name.set(JOptionPane.showInputDialog(
                         this,
-                        "Введите ваше имя:",
-                        "Конфигурация клиента",
+                        requestText,
+                        "Client configuration",
                         JOptionPane.QUESTION_MESSAGE)
                 )
         );
