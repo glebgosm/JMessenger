@@ -1,8 +1,6 @@
 package org.jmessenger.server;
 
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 
 // Authentication manager based on username/password pairs
@@ -143,14 +141,6 @@ public class LoginManager {
         PASSWORD_INCORRECT
     }
 
-
-    public static void main(String[] args) throws AuthorizationException {
-        LoginManager loginManager = getInstance();
-        loginManager.addUser("gleb", "123");
-        System.out.println(loginManager.checkCredentials("gleb", "123"));
-        System.out.println(loginManager.checkCredentials("gleb", "1234"));
-        System.out.println(loginManager.checkCredentials("gleb1", "123"));
-    }
 }
 
 
